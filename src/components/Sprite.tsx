@@ -18,13 +18,8 @@ export function Sprite({ image, position, onSelect }: SpriteProps) {
     }
   });
   return (
-    <mesh
-      ref={mesh}
-      castShadow
-      onClick={onSelect}
-      rotation={[Math.PI / 4, 0, 0]}
-    >
-      <planeBufferGeometry attach="geometry" args={[2, 2]} />
+    <mesh ref={mesh} castShadow onClick={onSelect} rotation={[0, 0, 0]}>
+      <planeBufferGeometry attach="geometry" args={[1, 1]} />
       <meshBasicMaterial attach="material" map={texture} transparent />
     </mesh>
   );
