@@ -2,19 +2,24 @@ import React, { Suspense } from "react";
 import ReactDOM from "react-dom";
 import * as THREE from "three";
 import { Canvas } from "@react-three/fiber";
-import { Plane } from "@react-three/drei";
+import { PerspectiveCamera, Plane } from "@react-three/drei";
 import "./index.css";
 import { PostProcessing } from "./components/Postprocessing";
 import { Action, useGameState } from "./components/logic";
 import { TorchLight } from "./components/TorchLight";
-import warriorSprite from "./components/warrior.gif";
 import { Sprite } from "./components/Sprite";
+import piromancerSprite from "./components/piromancer.png";
 
 export default function App() {
   const { state, next, action } = useGameState();
   const [selectedEntityId, setSelectedEntityId] = React.useState<string | null>(
     null
   );
+  const grid = React.useMemo(
+    () => new THREE.GridHelper(1000, 1000, "black", "black"),
+    []
+  );
+  const camera = React.useRef<THREE.Camera>();
   return (
     <React.Fragment>
       <Suspense fallback={<h1>Loading</h1>}>
@@ -23,30 +28,36 @@ export default function App() {
           shadows
           // @ts-ignore
           colorManagement
-          camera={{
-            position: [0, -8, 8],
-            rotation: [Math.PI / 4, 0, 0],
-            fov: 90,
-          }}
         >
+          <PerspectiveCamera
+            makeDefault
+            ref={camera}
+            position={[0, -8, 8]}
+            rotation={[Math.PI / 4, 0, 0]}
+          />
           <PostProcessing />
           <fogExp2 attach="fog" args={["black", 0.03]} />
-          <ambientLight intensity={0.2} />
-          <directionalLight
+          <ambientLight intensity={0.4} />
+          {/* <directionalLight
             intensity={0.2}
             castShadow
             position={[-100, 100, 100]}
-          />
-          <TorchLight position={[1, -1, 4]} />
-          <Plane receiveShadow position={[0, 0, -1]} args={[1000, 1000]}>
+          /> */}
+          <TorchLight position={[0, 0, 4]} />
+          <Plane receiveShadow position={[0, 0, -0.01]} args={[1000, 1000]}>
             <meshStandardMaterial attach="material" color="gray" dithering />
           </Plane>
-          <Grid />
+          <primitive
+            object={grid}
+            rotation={[Math.PI / 2, 0, 0]}
+            position={[-0.5, -0.5, 0]}
+          />
+
           {Object.entries(state.entities).map(([id, entity]) => {
             return (
               <Sprite
                 key={id}
-                image={warriorSprite}
+                image={piromancerSprite}
                 position={entity.position.toArray()}
                 onSelect={() => setSelectedEntityId(id)}
               />
@@ -62,6 +73,19 @@ export default function App() {
           userSelect: "none",
         }}
       >
+        <div>
+          <input
+            type="range"
+            min={2}
+            max={32}
+            step={0.01}
+            onChange={(event) => {
+              if (camera.current) {
+                camera.current.position.z = Number(event.currentTarget.value);
+              }
+            }}
+          />
+        </div>
         <div
           style={{ backgroundColor: "gray", padding: "16px" }}
           onClick={next}
@@ -77,22 +101,6 @@ export default function App() {
 }
 
 ReactDOM.render(<App />, document.getElementById("root"));
-
-function Grid() {
-  const size = 1000;
-  const divisions = 1000;
-  const gridHelper = React.useMemo(
-    () => new THREE.GridHelper(size, divisions, "black", "black"),
-    []
-  );
-  return (
-    <primitive
-      object={gridHelper}
-      rotation={[Math.PI / 2, 0, 0]}
-      position={[0.5, 0, -1]}
-    />
-  );
-}
 
 type MoveControlsProps = {
   onAction(action: Action): void;
