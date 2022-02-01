@@ -1,25 +1,34 @@
 import React, { Suspense } from "react";
 import ReactDOM from "react-dom";
 import * as THREE from "three";
-import { Canvas } from "@react-three/fiber";
-import { PerspectiveCamera, Plane } from "@react-three/drei";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import {
+  AdaptiveDpr,
+  Box,
+  Cone,
+  PerspectiveCamera,
+  Plane,
+} from "@react-three/drei";
 import "./index.css";
 import { PostProcessing } from "./components/Postprocessing";
-import { Action, useGameState } from "./components/logic";
+import { useGame } from "./components/game";
 import { TorchLight } from "./components/TorchLight";
 import { Sprite } from "./components/Sprite";
 import piromancerSprite from "./components/piromancer.png";
+import terrainSprite from "./components/terrain.png";
+import { useUI } from "./components/ui";
 
 export default function App() {
-  const { state, next, action } = useGameState();
-  const [selectedEntityId, setSelectedEntityId] = React.useState<string | null>(
-    null
-  );
+  const game = useGame();
+  const ui = useUI();
   const grid = React.useMemo(
     () => new THREE.GridHelper(1000, 1000, "black", "black"),
     []
   );
   const camera = React.useRef<THREE.Camera>();
+  const selectedEntity = Object.entries(game.state.entities).find(
+    ([id]) => ui.state.type === "entity" && id === ui.state.entityId
+  )?.[1];
   return (
     <React.Fragment>
       <Suspense fallback={<h1>Loading</h1>}>
@@ -29,37 +38,50 @@ export default function App() {
           // @ts-ignore
           colorManagement
         >
-          <PerspectiveCamera
-            makeDefault
-            ref={camera}
-            position={[0, -8, 8]}
-            rotation={[Math.PI / 4, 0, 0]}
-          />
+          <AdaptiveDpr pixelated />
+          <PerspectiveCamera makeDefault ref={camera} position={[-8, -8, 8]} />
+          <CameraLookAt />
           <PostProcessing />
           <fogExp2 attach="fog" args={["black", 0.03]} />
-          <ambientLight intensity={0.4} />
-          {/* <directionalLight
+          <ambientLight intensity={0.2} />
+          <directionalLight
             intensity={0.2}
             castShadow
-            position={[-100, 100, 100]}
-          /> */}
+            position={[50, 50, 50]}
+          />
+          {selectedEntity && (
+            <Cone
+              args={[0.25, 1, 16]}
+              position={new THREE.Vector3(0, 0, 1).add(selectedEntity.position)}
+              rotation={[-Math.PI / 2, 0, 0]}
+              castShadow
+            >
+              <meshStandardMaterial attach="material" color="white" />
+            </Cone>
+          )}
           <TorchLight position={[0, 0, 4]} />
-          <Plane receiveShadow position={[0, 0, -0.01]} args={[1000, 1000]}>
+          <Plane
+            receiveShadow
+            position={[0, 0, -0.51]}
+            args={[1000, 1000]}
+            onClick={(event) => {
+              console.log(event.point);
+            }}
+          >
             <meshStandardMaterial attach="material" color="gray" dithering />
           </Plane>
           <primitive
             object={grid}
             rotation={[Math.PI / 2, 0, 0]}
-            position={[-0.5, -0.5, 0]}
+            position={[-0.5, -0.5, -0.5]}
           />
-
-          {Object.entries(state.entities).map(([id, entity]) => {
+          {Object.entries(game.state.entities).map(([id, entity]) => {
             return (
               <Sprite
                 key={id}
                 image={piromancerSprite}
                 position={entity.position.toArray()}
-                onSelect={() => setSelectedEntityId(id)}
+                onSelect={() => ui.selectEntity(id)}
               />
             );
           })}
@@ -86,15 +108,18 @@ export default function App() {
             }}
           />
         </div>
-        <div
-          style={{ backgroundColor: "gray", padding: "16px" }}
-          onClick={next}
+        <button onClick={game.next}>next turn</button>
+        <button onClick={ui.cancel} disabled={ui.state.type === "initial"}>
+          X
+        </button>
+        <select
+          value={ui.state.type === "action" ? ui.state.actionId : ""}
+          disabled={ui.state.type !== "entity"}
         >
-          next
-        </div>
-        {selectedEntityId && (
-          <MoveControls onAction={(a) => action(selectedEntityId, a)} />
-        )}
+          <option value="">action</option>
+          <option value={"move"}>move</option>
+          <option value={"attack"}>attack</option>
+        </select>
       </div>
     </React.Fragment>
   );
@@ -102,188 +127,10 @@ export default function App() {
 
 ReactDOM.render(<App />, document.getElementById("root"));
 
-type MoveControlsProps = {
-  onAction(action: Action): void;
-};
-function MoveControls({ onAction }: MoveControlsProps) {
-  const size = 32;
-  return (
-    <div
-      style={{
-        position: "relative",
-        width: `${size}*3px`,
-        height: `${size}*3px`,
-      }}
-    >
-      <div
-        style={{
-          position: "absolute",
-          top: size * 0,
-          left: size * 0,
-          width: size,
-          height: size,
-          backgroundColor: "gray",
-          border: "1px solid black",
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-        }}
-        onClick={() =>
-          onAction({ type: "move", velocity: new THREE.Vector3(-1, 1, 0) })
-        }
-      >
-        nw
-      </div>
-      <div
-        style={{
-          position: "absolute",
-          top: size * 0,
-          left: size * 1,
-          width: size,
-          height: size,
-          backgroundColor: "gray",
-          border: "1px solid black",
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-        }}
-        onClick={() =>
-          onAction({ type: "move", velocity: new THREE.Vector3(0, 1, 0) })
-        }
-      >
-        n
-      </div>
-      <div
-        style={{
-          position: "absolute",
-          top: size * 0,
-          left: size * 2,
-          width: size,
-          height: size,
-          backgroundColor: "gray",
-          border: "1px solid black",
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-        }}
-        onClick={() =>
-          onAction({ type: "move", velocity: new THREE.Vector3(1, 1, 0) })
-        }
-      >
-        ne
-      </div>
-      <div
-        style={{
-          position: "absolute",
-          top: size * 1,
-          left: size * 0,
-          width: size,
-          height: size,
-          backgroundColor: "gray",
-          border: "1px solid black",
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-        }}
-        onClick={() =>
-          onAction({ type: "move", velocity: new THREE.Vector3(-1, 0, 0) })
-        }
-      >
-        w
-      </div>
-      <div
-        style={{
-          position: "absolute",
-          top: size * 1,
-          left: size * 1,
-          width: size,
-          height: size,
-          backgroundColor: "gray",
-          border: "1px solid black",
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-        }}
-        onClick={() =>
-          onAction({ type: "move", velocity: new THREE.Vector3(0, 0, 0) })
-        }
-      ></div>
-      <div
-        style={{
-          position: "absolute",
-          top: size * 1,
-          left: size * 2,
-          width: size,
-          height: size,
-          backgroundColor: "gray",
-          border: "1px solid black",
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-        }}
-        onClick={() =>
-          onAction({ type: "move", velocity: new THREE.Vector3(1, 0, 0) })
-        }
-      >
-        e
-      </div>
-      <div
-        style={{
-          position: "absolute",
-          top: size * 2,
-          left: size * 0,
-          width: size,
-          height: size,
-          backgroundColor: "gray",
-          border: "1px solid black",
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-        }}
-        onClick={() =>
-          onAction({ type: "move", velocity: new THREE.Vector3(-1, -1, 0) })
-        }
-      >
-        sw
-      </div>
-      <div
-        style={{
-          position: "absolute",
-          top: size * 2,
-          left: size * 1,
-          width: size,
-          height: size,
-          backgroundColor: "gray",
-          border: "1px solid black",
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-        }}
-        onClick={() =>
-          onAction({ type: "move", velocity: new THREE.Vector3(0, -1, 0) })
-        }
-      >
-        s
-      </div>
-      <div
-        style={{
-          position: "absolute",
-          top: size * 2,
-          left: size * 2,
-          width: size,
-          height: size,
-          backgroundColor: "gray",
-          border: "1px solid black",
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-        }}
-        onClick={() =>
-          onAction({ type: "move", velocity: new THREE.Vector3(1, -1, 0) })
-        }
-      >
-        se
-      </div>
-    </div>
-  );
+function CameraLookAt() {
+  useFrame(({ camera }) => {
+    camera.up = new THREE.Vector3(0, 0, 1);
+    camera.lookAt(new THREE.Vector3(0, 0, 0));
+  });
+  return null;
 }

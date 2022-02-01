@@ -18,11 +18,11 @@ export function PostProcessing() {
   const lut: THREE.Texture = useLoader(LUTCubeLoader, "/django-25.cube");
   return (
     <EffectComposer>
-      <DepthOfField focusDistance={0} focalLength={0.02} bokehScale={2} />
+      {/* <DepthOfField bokehScale={2} /> */}
       <Bloom luminanceThreshold={0} luminanceSmoothing={0.9} height={300} />
       <Noise opacity={0.01} />
-      <Vignette eskil={false} offset={0.1} darkness={0.9} />
-      <SSAO />
+      <Vignette eskil={false} offset={0.35} darkness={0.5} />
+      {/* <SSAO /> */}
       <ToneMapping />
       <LUT lut={lut} />
     </EffectComposer>

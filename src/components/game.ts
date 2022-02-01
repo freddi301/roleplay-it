@@ -12,26 +12,31 @@ type State = {
   entities: Record<string, Entity>;
 };
 
-export type Action = {
-  type: "move";
-  velocity: THREE.Vector3;
-};
+export type Action =
+  | {
+      type: "move";
+      velocity: THREE.Vector3;
+    }
+  | {
+      type: "attack";
+      target: THREE.Vector3;
+    };
 
-const initialState: State = {
+const initial: State = {
   entities: {
     player: {
       position: new THREE.Vector3(0, 0, 0),
       velocity: new THREE.Vector3(0, 0, 0),
     },
     bot: {
-      position: new THREE.Vector3(2, 0, 0),
+      position: new THREE.Vector3(4, 0, 0),
       velocity: new THREE.Vector3(0, 0, 0),
     },
   },
 };
 
-export function useGameState() {
-  const [state, setState] = React.useState(initialState);
+export function useGame() {
+  const [state, setState] = React.useState(initial);
   const [actions, setActions] = React.useState<Record<string, Action>>({});
   const next = React.useCallback(() => {
     setState({
