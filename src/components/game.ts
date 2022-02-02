@@ -1,8 +1,6 @@
 import React from "react";
 import * as THREE from "three";
 
-// TODO fix overlap when one square is between entities and they move towards each other
-
 export type Entity = {
   position: THREE.Vector3;
   velocity: THREE.Vector3;
@@ -40,7 +38,9 @@ export function useGame() {
   const [actions, setActions] = React.useState<Record<string, Action>>({});
   const next = React.useCallback(() => {
     setState({
-      entities: resolveMotion(applyMotion(state.entities, actions)),
+      entities: resolveMotion(
+        applyMotion(resolveDamage(state.entities, actions), actions)
+      ),
     });
     setActions({});
   }, [state, actions]);
@@ -74,9 +74,6 @@ function resolveMotion(
       return [id, { position: target, velocity: new THREE.Vector3(0, 0, 0) }];
     })
   );
-  // const isEverythinStill = Object.values(step).every((entity) =>
-  //   entity.velocity.equals(new THREE.Vector3(0, 0, 0))
-  // );
   if (somethingMoved) return resolveMotion(step);
   return step;
 }
@@ -98,8 +95,25 @@ function applyMotion(
               velocity: entity.velocity.clone().add(action.velocity),
             },
           ];
+        default:
+          return [id, entity];
       }
-      throw new Error();
+    })
+  );
+}
+
+function resolveDamage(
+  entities: Record<string, Entity>,
+  actions: Record<string, Action>
+) {
+  return Object.fromEntries(
+    Object.entries(entities).flatMap(([id, entity]) => {
+      const isAttacked = Object.values(actions).some(
+        (action) =>
+          action.type === "attack" && action.target.equals(entity.position)
+      );
+      if (isAttacked) return [];
+      return [[id, entity]];
     })
   );
 }

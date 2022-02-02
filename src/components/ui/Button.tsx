@@ -30,7 +30,7 @@ export function Button({ onClick, enabled, sprite }: ButtonProps) {
             "drop-shadow(2px 4px 6px black)" +
             (enabled ? "" : " brightness(0.5)"),
           transform: hasMouse ? "scale(1.5)" : "scale(1)",
-          transition: "0.3s",
+          transition: "0.1s",
         }}
       />
     </button>

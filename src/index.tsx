@@ -14,8 +14,7 @@ import { Action, useGame } from "./components/game";
 import { TorchLight } from "./components/TorchLight";
 import { Sprite } from "./components/Sprite";
 import piromancerSprite from "./components/piromancer.png";
-import endTurnSprite from "./components/ui/end-turn.png";
-import { Button } from "./components/ui/Button";
+import { Ui } from "./components/ui/Ui";
 
 export default function App() {
   const game = useGame();
@@ -34,6 +33,15 @@ export default function App() {
     Object.entries(game.state.entities).find(([id, entity]) =>
       entity.position.equals(sourceLocation)
     )) ?? [null, null];
+  React.useEffect(() => {
+    const onWheel = (event: WheelEvent) => {
+      if (camera.current) {
+        camera.current.position.z += event.deltaY > 1 ? 2 : -2;
+      }
+    };
+    document.addEventListener("wheel", onWheel);
+    return () => document.removeEventListener("wheel", onWheel);
+  }, []);
   return (
     <React.Fragment>
       <Suspense fallback={<h1>Loading</h1>}>
@@ -135,44 +143,11 @@ export default function App() {
           })}
         </Canvas>
       </Suspense>
-      <div
-        style={{
-          position: "fixed",
-          width: "100vw",
-          boxSizing: "border-box",
-          bottom: "64px",
-          padding: "0 64px",
-          display: "grid",
-          columnGap: "64px",
-          gridAutoFlow: "column",
-          gridAutoColumns: "auto",
-        }}
-      >
-        <div>
-          <input
-            type="range"
-            min={2}
-            max={32}
-            step={0.01}
-            onChange={(event) => {
-              if (camera.current) {
-                camera.current.position.z = Number(event.currentTarget.value);
-              }
-            }}
-          />
-        </div>
-        <Button
-          onClick={() => setActionId("move")}
-          enabled={sourceEntity !== null}
-          sprite={endTurnSprite}
-        />
-        <Button
-          onClick={() => setActionId("attack")}
-          enabled={sourceEntity !== null}
-          sprite={endTurnSprite}
-        />
-        <Button onClick={game.next} enabled={true} sprite={endTurnSprite} />
-      </div>
+      <Ui
+        onEndTurn={game.next}
+        onAction={setActionId}
+        sourceEntity={sourceEntity}
+      />
     </React.Fragment>
   );
 }
