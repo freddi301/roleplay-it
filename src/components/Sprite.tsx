@@ -15,7 +15,13 @@ export function Sprite({ image, position }: SpriteProps) {
   const mesh = useRef<THREE.Mesh>(null);
   useFrame(({ camera }, delta) => {
     if (group.current) {
-      group.current.position.lerp(new THREE.Vector3(...position), delta);
+      group.current.position.add(
+        new THREE.Vector3(...position)
+          .sub(group.current.position)
+          .multiplyScalar(100)
+          .clampLength(0, 5)
+          .multiplyScalar(delta)
+      );
     }
     if (mesh.current) {
       mesh.current.up = new THREE.Vector3(0, 0, 1);
@@ -26,7 +32,7 @@ export function Sprite({ image, position }: SpriteProps) {
     <group ref={group}>
       <mesh position={[0, 0, 0.5]} ref={mesh}>
         <planeBufferGeometry attach="geometry" args={[1, 1]} />
-        <meshBasicMaterial attach="material" map={texture} transparent />
+        <meshStandardMaterial attach="material" map={texture} transparent />
       </mesh>
       <Box args={[1, 1, 1]} castShadow position={[0, 0, 0.5]}>
         <meshBasicMaterial attach="material" transparent opacity={0} />

@@ -4,6 +4,8 @@ import * as THREE from "three";
 export type Entity = {
   position: THREE.Vector3;
   velocity: THREE.Vector3;
+  ai: boolean;
+  type: "piromancer" | "sabertooth";
 };
 
 type State = {
@@ -25,10 +27,20 @@ const initial: State = {
     player: {
       position: new THREE.Vector3(0, 0, 0),
       velocity: new THREE.Vector3(0, 0, 0),
+      ai: false,
+      type: "piromancer",
     },
-    bot: {
+    bot1: {
       position: new THREE.Vector3(4, 0, 0),
       velocity: new THREE.Vector3(0, 0, 0),
+      ai: true,
+      type: "sabertooth",
+    },
+    bot2: {
+      position: new THREE.Vector3(0, 4, 0),
+      velocity: new THREE.Vector3(0, 0, 0),
+      ai: true,
+      type: "sabertooth",
     },
   },
 };
@@ -37,13 +49,21 @@ export function useGame() {
   const [state, setState] = React.useState(initial);
   const [actions, setActions] = React.useState<Record<string, Action>>({});
   const next = React.useCallback(() => {
-    setState({
-      entities: resolveMotion(
-        applyMotion(resolveDamage(state.entities, actions), actions)
-      ),
+    setState((state) => {
+      const aiActions = resolveAi(state.entities);
+      console.log(aiActions);
+      const combinedActions = { ...aiActions, ...actions };
+      return {
+        entities: resolveMotion(
+          applyMotion(
+            resolveDamage(state.entities, combinedActions),
+            combinedActions
+          )
+        ),
+      };
     });
     setActions({});
-  }, [state, actions]);
+  }, [actions]);
   const action = React.useCallback(
     (id: string, action: Action) => {
       setActions({ ...actions, [id]: action });
@@ -71,7 +91,15 @@ function resolveMotion(
       );
       if (isEntityAtTarget || willBeEntityAtTarget) return [id, entity];
       somethingMoved = true;
-      return [id, { position: target, velocity: new THREE.Vector3(0, 0, 0) }];
+      return [
+        id,
+        {
+          position: target,
+          velocity: new THREE.Vector3(0, 0, 0),
+          ai: entity.ai,
+          type: entity.type,
+        },
+      ];
     })
   );
   if (somethingMoved) return resolveMotion(step);
@@ -93,6 +121,8 @@ function applyMotion(
             {
               position: entity.position,
               velocity: entity.velocity.clone().add(action.velocity),
+              ai: entity.ai,
+              type: entity.type,
             },
           ];
         default:
@@ -115,5 +145,58 @@ function resolveDamage(
       if (isAttacked) return [];
       return [[id, entity]];
     })
+  );
+}
+
+function resolveAi(entities: Record<string, Entity>): Record<string, Action> {
+  const playerEntities = Object.values(entities).filter((entity) => !entity.ai);
+  return Object.fromEntries(
+    Object.entries(entities).flatMap(
+      ([aiId, aiEntity]): Array<[string, Action]> => {
+        if (!aiEntity.ai) return [];
+        const nearestPlayerEntity = playerEntities.reduce(
+          (nearestPlayerEntity: Entity | null, playerEntity) => {
+            if (!nearestPlayerEntity) return playerEntity;
+            const nearestDistance = nearestPlayerEntity.position.distanceTo(
+              aiEntity.position
+            );
+            const distance = playerEntity.position.distanceTo(
+              aiEntity.position
+            );
+            if (distance < nearestDistance) return playerEntity;
+            return nearestPlayerEntity;
+          },
+          null
+        );
+        if (!nearestPlayerEntity) return [];
+        if (nearestPlayerEntity.position.distanceTo(aiEntity.position) < 1.5) {
+          return [
+            [aiId, { type: "attack", target: nearestPlayerEntity.position }],
+          ];
+        }
+        return [
+          [
+            aiId,
+            {
+              type: "move",
+              velocity: clampToGrid(
+                nearestPlayerEntity.position
+                  .clone()
+                  .sub(aiEntity.position)
+                  .clampLength(0, 1)
+              ),
+            },
+          ],
+        ];
+      }
+    )
+  );
+}
+
+function clampToGrid(position: THREE.Vector3) {
+  return new THREE.Vector3(
+    Math.round(position.x),
+    Math.round(position.y),
+    Math.round(position.z)
   );
 }

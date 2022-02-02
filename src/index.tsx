@@ -13,8 +13,8 @@ import { PostProcessing } from "./components/Postprocessing";
 import { Action, useGame } from "./components/game";
 import { TorchLight } from "./components/TorchLight";
 import { Sprite } from "./components/Sprite";
-import piromancerSprite from "./components/piromancer.png";
 import { Ui } from "./components/ui/Ui";
+import { getEntitySprite } from "./components/entity/getEntitySprite";
 
 export default function App() {
   const game = useGame();
@@ -50,6 +50,7 @@ export default function App() {
           shadows
           // @ts-ignore
           colorManagement
+          antialias
         >
           <AdaptiveDpr pixelated />
           <PerspectiveCamera makeDefault ref={camera} position={[-8, -8, 8]} />
@@ -57,17 +58,20 @@ export default function App() {
           <PostProcessing />
           <fogExp2 attach="fog" args={["black", 0.025]} />
           <ambientLight intensity={0.2} />
-          <directionalLight
-            intensity={0.2}
+          <pointLight
             castShadow
-            position={[-0.5, 0.5, 1]}
+            args={[0xffffff, 0.2, 20]}
+            position={[-0.5 * 10, 0.5 * 10, 1 * 10]}
           />
           {sourceEntity && (
             <group position={sourceEntity.position}>
               <RoundedBox args={[1, 1, 0.1]} position={[0, 0, 0.05]}>
                 <meshStandardMaterial attach="material" color="#2583ff" />
               </RoundedBox>
-              <pointLight position={[0, 0, 0.5]} args={[0xffffff, 1, 1.5]} />
+              <pointLight
+                position={[-0.1, -0.1, 0.5]}
+                args={[0xffffff, 1, 1.1]}
+              />
             </group>
           )}
           {actionId && (
@@ -75,7 +79,10 @@ export default function App() {
               <RoundedBox args={[1, 1, 0.1]} position={[0, 0, 0.05]}>
                 <meshStandardMaterial attach="material" color="#ff4625" />
               </RoundedBox>
-              <pointLight position={[0, 0, 0.5]} args={[0xffffff, 1, 1.5]} />
+              <pointLight
+                position={[-0.1, -0.1, 0.5]}
+                args={[0xffffff, 1, 1.1]}
+              />
             </group>
           )}
           <TorchLight position={[-2, -2, 2]} />
@@ -136,7 +143,7 @@ export default function App() {
             return (
               <Sprite
                 key={id}
-                image={piromancerSprite}
+                image={getEntitySprite(entity)}
                 position={entity.position.toArray()}
               />
             );
