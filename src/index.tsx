@@ -1,34 +1,39 @@
 import React, { Suspense } from "react";
 import ReactDOM from "react-dom";
 import * as THREE from "three";
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { Canvas, useFrame } from "@react-three/fiber";
 import {
   AdaptiveDpr,
-  Box,
-  Cone,
   PerspectiveCamera,
   Plane,
+  RoundedBox,
 } from "@react-three/drei";
 import "./index.css";
 import { PostProcessing } from "./components/Postprocessing";
-import { useGame } from "./components/game";
+import { Action, useGame } from "./components/game";
 import { TorchLight } from "./components/TorchLight";
 import { Sprite } from "./components/Sprite";
 import piromancerSprite from "./components/piromancer.png";
-import terrainSprite from "./components/terrain.png";
-import { useUI } from "./components/ui";
+import endTurnSprite from "./components/ui/end-turn.png";
+import { Button } from "./components/ui/Button";
 
 export default function App() {
   const game = useGame();
-  const ui = useUI();
   const grid = React.useMemo(
     () => new THREE.GridHelper(1000, 1000, "black", "black"),
     []
   );
   const camera = React.useRef<THREE.Camera>();
-  const selectedEntity = Object.entries(game.state.entities).find(
-    ([id]) => ui.state.type === "entity" && id === ui.state.entityId
-  )?.[1];
+  const [sourceLocation, setSourceLocation] =
+    React.useState<THREE.Vector3 | null>(null);
+  const [actionId, setActionId] = React.useState<Action["type"] | null>(null);
+  const [targetLocation, setTargetLocation] = React.useState(
+    new THREE.Vector3(0, 0, 0)
+  );
+  const [sourceEntityId, sourceEntity] = (sourceLocation &&
+    Object.entries(game.state.entities).find(([id, entity]) =>
+      entity.position.equals(sourceLocation)
+    )) ?? [null, null];
   return (
     <React.Fragment>
       <Suspense fallback={<h1>Loading</h1>}>
@@ -42,30 +47,74 @@ export default function App() {
           <PerspectiveCamera makeDefault ref={camera} position={[-8, -8, 8]} />
           <CameraLookAt />
           <PostProcessing />
-          <fogExp2 attach="fog" args={["black", 0.03]} />
+          <fogExp2 attach="fog" args={["black", 0.025]} />
           <ambientLight intensity={0.2} />
           <directionalLight
             intensity={0.2}
             castShadow
-            position={[50, 50, 50]}
+            position={[-0.5, 0.5, 1]}
           />
-          {selectedEntity && (
-            <Cone
-              args={[0.25, 1, 16]}
-              position={new THREE.Vector3(0, 0, 1).add(selectedEntity.position)}
-              rotation={[-Math.PI / 2, 0, 0]}
-              castShadow
-            >
-              <meshStandardMaterial attach="material" color="white" />
-            </Cone>
+          {sourceEntity && (
+            <group position={sourceEntity.position}>
+              <RoundedBox args={[1, 1, 0.1]} position={[0, 0, 0.05]}>
+                <meshStandardMaterial attach="material" color="#2583ff" />
+              </RoundedBox>
+              <pointLight position={[0, 0, 0.5]} args={[0xffffff, 1, 1.5]} />
+            </group>
           )}
-          <TorchLight position={[0, 0, 4]} />
+          {actionId && (
+            <group position={targetLocation}>
+              <RoundedBox args={[1, 1, 0.1]} position={[0, 0, 0.05]}>
+                <meshStandardMaterial attach="material" color="#ff4625" />
+              </RoundedBox>
+              <pointLight position={[0, 0, 0.5]} args={[0xffffff, 1, 1.5]} />
+            </group>
+          )}
+          <TorchLight position={[-2, -2, 2]} />
           <Plane
+            position={[0, 0, -0.015]}
             receiveShadow
-            position={[0, 0, -0.51]}
             args={[1000, 1000]}
+            onPointerMove={(event) => {
+              const location = new THREE.Vector3(
+                Math.round(event.point.x),
+                Math.round(event.point.y),
+                0
+              );
+              if (!location.equals(targetLocation)) {
+                setTargetLocation(location);
+              }
+            }}
             onClick={(event) => {
-              console.log(event.point);
+              const location = new THREE.Vector3(
+                Math.round(event.point.x),
+                Math.round(event.point.y),
+                0
+              );
+              if (actionId && sourceEntityId && sourceEntity) {
+                switch (actionId) {
+                  case "move": {
+                    game.action(sourceEntityId, {
+                      type: "move",
+                      velocity: targetLocation
+                        .clone()
+                        .sub(sourceEntity.position),
+                    });
+                    break;
+                  }
+                  case "attack": {
+                    game.action(sourceEntityId, {
+                      type: "attack",
+                      target: targetLocation,
+                    });
+                    break;
+                  }
+                }
+                setSourceLocation(null);
+                setActionId(null);
+              } else {
+                setSourceLocation(location);
+              }
             }}
           >
             <meshStandardMaterial attach="material" color="gray" dithering />
@@ -73,7 +122,7 @@ export default function App() {
           <primitive
             object={grid}
             rotation={[Math.PI / 2, 0, 0]}
-            position={[-0.5, -0.5, -0.5]}
+            position={[-0.5, -0.5, 0]}
           />
           {Object.entries(game.state.entities).map(([id, entity]) => {
             return (
@@ -81,7 +130,6 @@ export default function App() {
                 key={id}
                 image={piromancerSprite}
                 position={entity.position.toArray()}
-                onSelect={() => ui.selectEntity(id)}
               />
             );
           })}
@@ -90,9 +138,14 @@ export default function App() {
       <div
         style={{
           position: "fixed",
-          top: "32px",
-          left: "32px",
-          userSelect: "none",
+          width: "100vw",
+          boxSizing: "border-box",
+          bottom: "64px",
+          padding: "0 64px",
+          display: "grid",
+          columnGap: "64px",
+          gridAutoFlow: "column",
+          gridAutoColumns: "auto",
         }}
       >
         <div>
@@ -108,18 +161,17 @@ export default function App() {
             }}
           />
         </div>
-        <button onClick={game.next}>next turn</button>
-        <button onClick={ui.cancel} disabled={ui.state.type === "initial"}>
-          X
-        </button>
-        <select
-          value={ui.state.type === "action" ? ui.state.actionId : ""}
-          disabled={ui.state.type !== "entity"}
-        >
-          <option value="">action</option>
-          <option value={"move"}>move</option>
-          <option value={"attack"}>attack</option>
-        </select>
+        <Button
+          onClick={() => setActionId("move")}
+          enabled={sourceEntity !== null}
+          sprite={endTurnSprite}
+        />
+        <Button
+          onClick={() => setActionId("attack")}
+          enabled={sourceEntity !== null}
+          sprite={endTurnSprite}
+        />
+        <Button onClick={game.next} enabled={true} sprite={endTurnSprite} />
       </div>
     </React.Fragment>
   );

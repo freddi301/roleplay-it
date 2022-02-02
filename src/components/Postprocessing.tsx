@@ -20,7 +20,7 @@ export function PostProcessing() {
     <EffectComposer>
       {/* <DepthOfField bokehScale={2} /> */}
       <Bloom luminanceThreshold={0} luminanceSmoothing={0.9} height={300} />
-      <Noise opacity={0.01} />
+      <Noise opacity={0.015} />
       <Vignette eskil={false} offset={0.35} darkness={0.5} />
       {/* <SSAO /> */}
       <ToneMapping />

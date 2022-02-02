@@ -1,16 +1,15 @@
 import React, { useRef } from "react";
 import * as THREE from "three";
 import { useFrame, useLoader } from "@react-three/fiber";
-import { RoundedBox } from "@react-three/drei";
+import { Box } from "@react-three/drei";
 
 // TODO https://stackoverflow.com/questions/43848330/three-js-shadows-cast-by-partially-transparent-mesh
 
 type SpriteProps = {
   image: string;
   position: [number, number, number];
-  onSelect(): void;
 };
-export function Sprite({ image, position, onSelect }: SpriteProps) {
+export function Sprite({ image, position }: SpriteProps) {
   const texture = useLoader(THREE.TextureLoader, image);
   const group = useRef<THREE.Group>(null);
   const mesh = useRef<THREE.Mesh>(null);
@@ -24,14 +23,14 @@ export function Sprite({ image, position, onSelect }: SpriteProps) {
     }
   });
   return (
-    <group ref={group} position={position}>
-      <mesh position={[0, 0, 0]} ref={mesh} onClick={onSelect}>
+    <group ref={group}>
+      <mesh position={[0, 0, 0.5]} ref={mesh}>
         <planeBufferGeometry attach="geometry" args={[1, 1]} />
-        <meshStandardMaterial attach="material" map={texture} transparent />
+        <meshBasicMaterial attach="material" map={texture} transparent />
       </mesh>
-      <RoundedBox args={[1, 1, 1]} radius={0.1} castShadow>
+      <Box args={[1, 1, 1]} castShadow position={[0, 0, 0.5]}>
         <meshBasicMaterial attach="material" transparent opacity={0} />
-      </RoundedBox>
+      </Box>
     </group>
   );
 }

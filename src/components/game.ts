@@ -64,7 +64,12 @@ function resolveMotion(
       const isEntityAtTarget = entries.some(([_, entity]) =>
         entity.position.equals(target)
       );
-      if (isEntityAtTarget) return [id, entity];
+      const willBeEntityAtTarget = entries.some(
+        ([i, entity]) =>
+          i !== id &&
+          entity.position.clone().add(entity.velocity).equals(target)
+      );
+      if (isEntityAtTarget || willBeEntityAtTarget) return [id, entity];
       somethingMoved = true;
       return [id, { position: target, velocity: new THREE.Vector3(0, 0, 0) }];
     })

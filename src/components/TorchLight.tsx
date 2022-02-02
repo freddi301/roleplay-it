@@ -24,8 +24,7 @@ export function TorchLight({ position }: TorchLightProps) {
     <pointLight
       ref={mesh}
       castShadow
-      intensity={1}
-      args={[0xe3b549, 1, 10]}
+      args={[0xe3b549, 1, 5]}
       position={position}
     />
   );
