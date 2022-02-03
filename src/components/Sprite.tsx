@@ -18,9 +18,8 @@ export function Sprite({ image, position }: SpriteProps) {
       group.current.position.add(
         new THREE.Vector3(...position)
           .sub(group.current.position)
-          .multiplyScalar(100)
           .clampLength(0, 5)
-          .multiplyScalar(delta)
+          .multiplyScalar(delta * 10)
       );
     }
     if (mesh.current) {

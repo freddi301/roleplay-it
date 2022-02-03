@@ -31,13 +31,13 @@ const initial: State = {
       type: "piromancer",
     },
     bot1: {
-      position: new THREE.Vector3(4, 0, 0),
+      position: new THREE.Vector3(10, 0, 0),
       velocity: new THREE.Vector3(0, 0, 0),
       ai: true,
       type: "sabertooth",
     },
     bot2: {
-      position: new THREE.Vector3(0, 4, 0),
+      position: new THREE.Vector3(0, 15, 0),
       velocity: new THREE.Vector3(0, 0, 0),
       ai: true,
       type: "sabertooth",
@@ -51,7 +51,6 @@ export function useGame() {
   const next = React.useCallback(() => {
     setState((state) => {
       const aiActions = resolveAi(state.entities);
-      console.log(aiActions);
       const combinedActions = { ...aiActions, ...actions };
       return {
         entities: resolveMotion(
